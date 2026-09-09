@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>集采物料不适用需自采采购申请</title>
+<style>
+:root{
+  --primary:#1070e8;--primary-light:#e8f2ff;--primary-dark:#0958c0;
+  --success:#07b56f;--success-bg:#e8f8f0;
+  --warning:#f5a623;--warning-bg:#fff7e6;
+  --danger:#e34d4d;--danger-bg:#fde8e8;
+  --gray-1:#1a1a1a;--gray-2:#555;--gray-3:#999;--gray-4:#ccc;--gray-5:#f5f5f5;
+  --bg:#f0f2f5;--card:#fff;--radius:12px;--shadow:0 2px 12px rgba(0,0,0,.06);
+  --font:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--gray-1);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+body{display:flex;flex-direction:column;max-width:500px;margin:0 auto}
+
+.header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:20px 16px 14px;position:sticky;top:0;z-index:100}
+.header h1{font-size:18px;font-weight:600;margin-bottom:2px}
+.header .sub{font-size:12px;opacity:.75}
+
+.notice{background:#fffbe6;border-bottom:1px solid #ffe58f;padding:10px 16px;font-size:13px;color:#8c6d1f;display:flex;align-items:flex-start;gap:6px;position:sticky;top:56px;z-index:99}
+.notice-icon{flex-shrink:0;margin-top:1px}
+
+.tabs{display:flex;background:#fff;border-bottom:1px solid #eee;position:sticky;top:90px;z-index:98}
+.tab{flex:1;text-align:center;padding:12px 0;font-size:14px;color:var(--gray-3);cursor:pointer;position:relative;transition:color .2s}
+.tab.active{color:var(--primary);font-weight:600}
+.tab.active::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:24px;height:3px;background:var(--primary);border-radius:2px}
+.tab .badge{display:inline-block;background:var(--primary);color:#fff;font-size:11px;min-width:18px;height:18px;line-height:18px;border-radius:9px;padding:0 5px;margin-left:4px;vertical-align:middle}
+
+.content{flex:1;padding:12px;overflow-y:auto;padding-bottom:32px}
+.page{display:none}
+.page.active{display:block}
+
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:12px}
+.card-title{font-size:15px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card-title .icon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0;font-weight:700}
+
+.form-group{margin-bottom:16px}
+.form-group:last-child{margin-bottom:0}
+.form-label{font-size:13px;color:var(--gray-2);margin-bottom:6px;display:flex;align-items:center;gap:4px}
+.form-label .required{color:var(--danger);font-size:14px}
+.form-input,.form-select,.form-textarea{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:15px;font-family:var(--font);background:#fff;color:var(--gray-1);transition:border-color .2s;appearance:none;-webkit-appearance:none}
+.form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(16,112,232,.1)}
+.form-input[readonly]{background:#f9f9f9;color:var(--gray-2)}
+.form-select{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 12px center;padding-right:32px}
+.form-textarea{min-height:80px;resize:vertical}
+
+.check-group{display:flex;flex-wrap:wrap;gap:8px}
+.check-item{display:flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;cursor:pointer;transition:all .2s;user-select:none}
+.check-item.selected{border-color:var(--primary);background:var(--primary-light);color:var(--primary)}
+.check-item input{display:none}
+
+.btn{display:block;width:100%;padding:13px;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--font)}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:active{background:var(--primary-dark)}
+.btn-outline{background:#fff;color:var(--primary);border:1px solid var(--primary)}
+.btn-sm{padding:8px 16px;font-size:14px;width:auto;display:inline-flex;align-items:center;gap:4px}
+
+.status{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500}
+.status-pending{background:var(--warning-bg);color:#b07613}
+.status-zy{background:#f0ecfa;color:#7c5cd6}
+.status-cz{background:var(--primary-light);color:var(--primary)}
+.status-done{background:var(--success-bg);color:var(--success)}
+.status-rejected{background:var(--danger-bg);color:var(--danger)}
+
+.timeline{position:relative;padding-left:24px}
+.timeline::before{content:'';position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:#e0e0e0}
+.timeline-item{position:relative;padding-bottom:20px}
+.timeline-item:last-child{padding-bottom:0}
+.timeline-dot{position:absolute;left:-24px;top:4px;width:16px;height:16px;border-radius:50%;border:2px solid #e0e0e0;background:#fff;z-index:1}
+.timeline-dot.done{background:var(--success);border-color:var(--success)}
+.timeline-dot.active{background:var(--primary);border-color:var(--primary);box-shadow:0 0 0 4px rgba(16,112,232,.2)}
+.timeline-dot.rejected{background:var(--danger);border-color:var(--danger)}
+.timeline-dot.waiting{background:#fff;border-color:#e0e0e0}
+.timeline-title{font-size:14px;font-weight:600;margin-bottom:2px}
+.timeline-meta{font-size:12px;color:var(--gray-3)}
+.timeline-content{font-size:13px;color:var(--gray-2);margin-top:4px;padding:8px 12px;background:var(--gray-5);border-radius:8px}
+
+.record{padding:14px 16px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background .15s}
+.record:last-child{border-bottom:none}
+.record:active{background:var(--gray-5)}
+.record-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.record-name{font-size:15px;font-weight:600}
+.record-info{display:flex;gap:10px;font-size:13px;color:var(--gray-2);flex-wrap:wrap}
+.record-info span{display:flex;align-items:center;gap:3px}
+
+.empty{text-align:center;padding:48px 24px;color:var(--gray-3)}
+.empty-icon{font-size:48px;margin-bottom:12px;opacity:.5}
+.empty-text{font-size:15px}
+.empty-sub{font-size:13px;margin-top:4px}
+
+.detail-header{padding:16px;background:#fff;border-radius:var(--radius);margin-bottom:12px;box-shadow:var(--shadow)}
+.detail-section{margin-bottom:16px}
+.detail-section:last-child{margin-bottom:0}
+.detail-section-title{font-size:13px;color:var(--gray-3);margin-bottom:8px;letter-spacing:.5px}
+.detail-row{display:flex;padding:5px 0;font-size:14px}
+.detail-label{width:80px;color:var(--gray-3);flex-shrink:0}
+.detail-value{flex:1;color:var(--gray-1);word-break:break-all}
+
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.75);color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;z-index:300;pointer-events:none;opacity:0;transition:opacity .3s}
+.toast.show{opacity:1}
+
+.search-bar{display:flex;gap:8px;margin-bottom:12px}
+.search-input{flex:1;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff}
+.search-input:focus{outline:none;border-color:var(--primary)}
+.filter-select{padding:8px 28px 8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;background:#fff;appearance:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 8px center}
+
+.divider{height:1px;background:#eee;margin:12px 0}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:var(--gray-5);color:var(--gray-2)}
+.attachment-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.attachment-item{display:flex;align-items:center;gap:4px;padding:4px 10px;background:var(--gray-5);border-radius:6px;font-size:13px;color:var(--primary)}
+.alt-material-card{background:var(--gray-5);border-radius:8px;padding:12px;margin-bottom:8px}
+.alt-material-card .alt-title{font-size:13px;font-weight:600;color:var(--gray-2);margin-bottom:8px}
+.alt-material-card .alt-row{display:flex;gap:8px}
+.alt-material-card .alt-row .form-group{flex:1;margin-bottom:0}
+
+.success-overlay{position:fixed;inset:0;background:rgba(255,255,255,.95);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px}
+.success-overlay.show{display:flex}
+.success-check{width:64px;height:64px;border-radius:50%;background:var(--success);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.success-check svg{width:32px;height:32px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.success-title{font-size:20px;font-weight:600;margin-bottom:8px}
+.success-desc{font-size:14px;color:var(--gray-3);margin-bottom:24px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 style="font-size:16px">集采物料不适用需自采采购申请</h1>
+  <div class="sub">非贸采购管理中心</div>
+</div>
+
+<div class="notice">
+  <span class="notice-icon">📌</span>
+  <span>请填写集采物料不适用的情况并申请自采采购，提交后由采购中心审批处理。附件须包含部门领导审批截图。</span>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="submit" onclick="switchTab('submit')">提交申请</div>
+  <div class="tab" data-tab="history" onclick="switchTab('history')">我的记录<span class="badge" id="countBadge" style="display:none">0</span></div>
+</div>
+
+<div class="content">
+
+  <div class="page active" id="page-submit">
+    <form id="feedbackForm" onsubmit="return false">
+
+      <div class="card">
+        <div class="card-title"><span class="icon" style="background:var(--primary)">1</span>基本信息</div>
+
+        <div class="form-group">
+          <div class="form-label">提报人</div>
+          <input class="form-input" id="f_submitter" placeholder="自动获取" readonly>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label"><span class="required">*</span>工厂全称</div>
+          <input class="form-input" id="f_factory" placeholder="如：益海嘉里（昆山）食品工业有限公司" required>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label"><span class="required">*</span>所属部门</div>
+          <select class="form-select" id="f_dept" required onchange="toggleWorkshop();toggleDeptOther()">
+            <option value="">请选择</option>
+            <option value="机修">机修</option>
+            <option value="电修">电修</option>
+            <option value="品管">品管</option>
+            <option value="生产">生产</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="deptOtherWrap" style="display:none">
+          <div class="form-label"><span class="required">*</span>部门名称</div>
+          <input class="form-input" id="f_deptOther" placeholder="请输入所在部门名称">
+        </div>
+
+        <div class="form-group" id="workshopWrap" style="display:none">
+          <div class="form-label"><span class="required">*</span>具体车间</div>
+          <input class="form-input" id="f_workshop" placeholder="如：烘焙一车间、酱油灌装车间">
+        </div>
+
+        <div class="form-group">
+          <div class="form-label"><span class="required">*</span>物料编码</div>
+          <input class="form-input" id="f_materialCode" placeholder="如 0201-0060663" maxlength="15" required>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label"><span class="required">*</span>物料描述</div>
+          <input class="form-input" id="f_materialName" placeholder="如 pH计 PHS-3C(上海雷磁)" required>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon" style="background:var(--danger)">2</span>不适用原因<span style="color:var(--danger);font-size:12px;font-weight:400;margin-left:auto">可多选</span></div>
+
+        <div class="check-group" id="reasonGroup">
+          <label class="check-item" onclick="toggleCheck(this)"><input type="checkbox" value="规格参数不符">规格参数不符</label>
+          <label class="check-item" onclick="toggleCheck(this)"><input type="checkbox" value="交期过长">交期过长</label>
+          <label class="check-item" onclick="toggleCheck(this)"><input type="checkbox" value="价格偏高">价格偏高</label>
+          <label class="check-item" onclick="toggleCheck(this)"><input type="checkbox" value="停产/淘汰" onchange="toggleAltMaterial()">停产/淘汰</label>
+          <label class="check-item" onclick="toggleCheck(this)" id="reasonOtherLabel"><input type="checkbox" value="其他" onchange="toggleOtherReason()">其他</label>
+        </div>
+
+        <div id="otherReasonWrap" style="display:none;margin-top:8px">
+          <input class="form-input" id="f_otherReason" placeholder="请补充说明">
+        </div>
+
+        <div id="altMaterialWrap" style="display:none;margin-top:12px">
+          <div class="form-label" style="font-size:14px;font-weight:600;color:var(--gray-1);margin-bottom:10px"><span class="required">*</span>替代物料（至少填写3个）</div>
+          <div id="altMaterialList">
+            <div class="alt-material-card"><div class="alt-title">替代物料 1</div><div class="alt-row"><div class="form-group"><input class="form-input alt-code" placeholder="物料编码"></div><div class="form-group"><input class="form-input alt-name" placeholder="物料描述"></div></div></div>
+            <div class="alt-material-card"><div class="alt-title">替代物料 2</div><div class="alt-row"><div class="form-group"><input class="form-input alt-code" placeholder="物料编码"></div><div class="form-group"><input class="form-input alt-name" placeholder="物料描述"></div></div></div>
+            <div class="alt-material-card"><div class="alt-title">替代物料 3</div><div class="alt-row"><div class="form-group"><input class="form-input alt-code" placeholder="物料编码"></div><div class="form-group"><input class="form-input alt-name" placeholder="物料描述"></div></div></div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:12px">
+          <div class="form-label"><span class="required">*</span>详细说明</div>
+          <textarea class="form-textarea" id="f_detail" placeholder="请描述具体不适用的情况，如实际工况与物料参数的差异等" required></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon" style="background:var(--warning)">3</span>附件上传</div>
+        <div style="margin-bottom:10px;font-size:12px;color:var(--danger)">必传：需包含相应部门领导审批截图（集团机修/集团品管/集团生产等）</div>
+        <div class="form-group">
+          <div style="border:2px dashed #ddd;border-radius:8px;padding:24px;text-align:center;color:var(--gray-3);cursor:pointer" onclick="document.getElementById('fileInput').click()">
+            <div style="font-size:24px;margin-bottom:4px">+</div>
+            <div style="font-size:14px">点击上传照片 / 文档</div>
+            <div style="font-size:12px;margin-top:2px">支持 jpg、png、pdf，单个不超过 10MB</div>
+          </div>
+          <input type="file" id="fileInput" multiple accept="image/*,.pdf" style="display:none" onchange="handleFiles(this)">
+          <div class="attachment-list" id="attachmentList"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="icon" style="background:var(--gray-3)">4</span>备注（选填）</div>
+        <textarea class="form-textarea" id="f_remark" placeholder="其他需要补充的信息" style="min-height:60px"></textarea>
+      </div>
+
+      <button class="btn btn-primary" onclick="submitForm()" id="submitBtn">提交申请</button>
+      <div style="height:16px"></div>
+    </form>
+  </div>
+
+  <div class="page" id="page-history">
+    <div class="search-bar">
+      <input class="search-input" id="historySearch" placeholder="搜索编码/描述/部门" oninput="filterHistory()">
+      <select class="filter-select" id="historyFilter" onchange="filterHistory()">
+        <option value="">全部</option>
+        <option value="submitted">已提交</option>
+        <option value="zy_review">张月审批中</option>
+        <option value="cz_review">陈湛审批中</option>
+        <option value="completed">已完成</option>
+        <option value="rejected">已退回</option>
+      </select>
+    </div>
+    <div id="historyList"></div>
+  </div>
+
+  <div class="page" id="page-detail">
+    <div style="margin-bottom:12px">
+      <button class="btn btn-sm btn-outline" onclick="goBack()" style="border:none;padding:6px 12px;font-size:13px">← 返回列表</button>
+    </div>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<div class="success-overlay" id="successOverlay">
+  <div class="success-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+  <div class="success-title">提交成功</div>
+  <div class="success-desc" id="successDesc">您的申请已提交，将由采购中心审批处理</div>
+  <button class="btn btn-primary" style="width:auto;padding:10px 40px" onclick="closeSuccess()">继续填写</button>
+  <div style="margin-top:12px"><button class="btn btn-sm btn-outline" style="border:none;font-size:13px" onclick="closeSuccess(true)">查看记录</button></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CONFIG={API_BASE:'',currentUser:'张月',currentUserId:'zhangyue9'};
+
+(function autoDetectUser(){try{if(window.wx&&wx.invoke){wx.invoke('getContext',{},function(res){if(res.err_msg==='getContext:ok'){var ctx=JSON.parse(res.data);CONFIG.currentUserId=ctx.userid||CONFIG.currentUserId;if(CONFIG.API_BASE){fetch(CONFIG.API_BASE+'/api/userinfo?userid='+CONFIG.currentUserId).then(function(r){return r.json()}).then(function(d){if(d.name){CONFIG.currentUser=d.name;document.getElementById('f_submitter').value=d.name}})}}})}}catch(e){}})();
+
+let state={records:[],currentTab:'submit',previousTab:'history',attachments:[],nextId:1};
+try{var s=localStorage.getItem('caigou_fb_v3');if(s){var p=JSON.parse(s);state.records=p.records||[];state.nextId=p.nextId||1}}catch(e){}
+function saveState(){try{localStorage.setItem('caigou_fb_v3',JSON.stringify({records:state.records,nextId:state.nextId}))}catch(e){}}
+
+function switchTab(tab){state.currentTab=tab;state.previousTab=tab;document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('active',t.dataset.tab===tab)});document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});document.getElementById('page-'+tab).classList.add('active');if(tab==='history')renderHistory()}
+function showDetail(id){var r=state.records.find(function(x){return x.id===id});if(!r)return;document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});document.getElementById('page-detail').classList.add('active');document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});renderDetail(r)}
+function goBack(){switchTab(state.previousTab||'history')}
+
+function toggleCheck(el){setTimeout(function(){var cb=el.querySelector('input');el.classList.toggle('selected',cb.checked)},0)}
+function toggleOtherReason(){var cb=document.querySelector('#reasonOtherLabel input');document.getElementById('otherReasonWrap').style.display=cb.checked?'block':'none'}
+function toggleAltMaterial(){var cb=document.querySelector('input[value="停产/淘汰"]');document.getElementById('altMaterialWrap').style.display=cb.checked?'block':'none'}
+function toggleWorkshop(){var d=document.getElementById('f_dept').value;document.getElementById('workshopWrap').style.display=d==='生产'?'block':'none';if(d!=='生产')document.getElementById('f_workshop').value=''}
+function toggleDeptOther(){var d=document.getElementById('f_dept').value;document.getElementById('deptOtherWrap').style.display=d==='其他'?'block':'none';if(d!=='其他')document.getElementById('f_deptOther').value=''}
+
+function handleFiles(input){var list=document.getElementById('attachmentList');Array.from(input.files).forEach(function(file){if(file.size>10*1024*1024){showToast('文件 '+file.name+' 超过 10MB');return}state.attachments.push({name:file.name,size:file.size});var item=document.createElement('div');item.className='attachment-item';item.innerHTML='📎 '+file.name+' <span style="color:var(--gray-3);font-size:11px">'+(file.size/1024).toFixed(0)+'KB</span>';list.appendChild(item)})}
+
+function submitForm(){
+  var factory=document.getElementById('f_factory').value.trim();
+  var dept=document.getElementById('f_dept').value;
+  var workshop=document.getElementById('f_workshop').value.trim();
+  var deptOther=document.getElementById('f_deptOther').value.trim();
+  var code=document.getElementById('f_materialCode').value.trim();
+  var name=document.getElementById('f_materialName').value.trim();
+  var detail=document.getElementById('f_detail').value.trim();
+  var reasons=[];
+  document.querySelectorAll('#reasonGroup .check-item.selected').forEach(function(el){var val=el.querySelector('input').value;if(val==='其他'){var o=document.getElementById('f_otherReason').value.trim();reasons.push(o?'其他：'+o:'其他')}else reasons.push(val)});
+  var isElim=reasons.indexOf('停产/淘汰')>=0;
+  var altM=[];
+  if(isElim){var cs=document.querySelectorAll('#altMaterialList .alt-code'),ns=document.querySelectorAll('#altMaterialList .alt-name');for(var i=0;i<cs.length;i++){var c=cs[i].value.trim(),n=ns[i].value.trim();if(c||n)altM.push({code:c,name:n})}}
+
+  if(!factory)return showToast('请填写工厂全称');
+  if(!dept)return showToast('请选择所属部门');
+  if(dept==='生产'&&!workshop)return showToast('请填写具体车间');
+  if(dept==='其他'&&!deptOther)return showToast('请填写部门名称');
+  if(!code)return showToast('请输入物料编码');
+  if(!name)return showToast('请输入物料描述');
+  if(reasons.length===0)return showToast('请选择不适用原因');
+  if(!detail)return showToast('请填写详细说明');
+  if(isElim&&altM.length<3)return showToast('选择"停产/淘汰"时需填写至少3个替代物料');
+  if(state.attachments.length===0)return showToast('请上传附件（含部门领导审批截图）');
+
+  var dd=dept;if(dept==='生产'&&workshop)dd=dept+'（'+workshop+'）';else if(dept==='其他'&&deptOther)dd=deptOther;
+
+  var record={id:state.nextId++,code:'NAC-2026-'+String(state.nextId-1).padStart(4,'0'),submitter:CONFIG.currentUser,submitterId:CONFIG.currentUserId,factory:factory,dept:dept,deptDisplay:dd,workshop:workshop,materialCode:code,materialName:name,reasons:reasons,detail:detail,altMaterials:altM,remark:document.getElementById('f_remark').value.trim(),attachments:state.attachments.map(function(a){return a.name}),status:'submitted',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),flow:[{step:'submitted',label:'已提交',handler:CONFIG.currentUser,time:new Date().toISOString(),comment:''}]};
+  state.records.unshift(record);saveState();
+
+  document.getElementById('feedbackForm').reset();
+  document.getElementById('f_submitter').value=CONFIG.currentUser;
+  document.querySelectorAll('.check-item').forEach(function(el){el.classList.remove('selected')});
+  document.getElementById('otherReasonWrap').style.display='none';
+  document.getElementById('altMaterialWrap').style.display='none';
+  document.getElementById('workshopWrap').style.display='none';
+  document.getElementById('deptOtherWrap').style.display='none';
+  document.getElementById('attachmentList').innerHTML='';
+  document.querySelectorAll('#altMaterialList .alt-code, #altMaterialList .alt-name').forEach(function(el){el.value=''});
+  state.attachments=[];
+
+  document.getElementById('successDesc').textContent='编号 '+record.code+'，将由采购中心审批处理';
+  document.getElementById('successOverlay').classList.add('show');
+  updateBadge();
+}
+function closeSuccess(goH){document.getElementById('successOverlay').classList.remove('show');if(goH)switchTab('history')}
+
+function getStatusInfo(s){var m={submitted:{label:'已提交',cls:'status-pending'},zy_review:{label:'张月审批中',cls:'status-zy'},cz_review:{label:'陈湛审批中',cls:'status-cz'},completed:{label:'已完成',cls:'status-done'},rejected:{label:'已退回',cls:'status-rejected'}};return m[s]||{label:s,cls:''}}
+function fmtD(iso){if(!iso)return'-';var d=new Date(iso);return(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function fmtDF(iso){if(!iso)return'-';var d=new Date(iso);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+
+function renderHistory(){
+  var list=document.getElementById('historyList'),records=state.records;
+  var search=document.getElementById('historySearch').value.trim().toLowerCase(),filter=document.getElementById('historyFilter').value;
+  if(search)records=records.filter(function(r){return r.materialCode.toLowerCase().indexOf(search)>=0||r.materialName.toLowerCase().indexOf(search)>=0||(r.deptDisplay||r.dept).toLowerCase().indexOf(search)>=0||(r.factory||'').toLowerCase().indexOf(search)>=0});
+  if(filter)records=records.filter(function(r){return r.status===filter});
+  if(records.length===0){list.innerHTML='<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">暂无记录</div><div class="empty-sub">提交反馈后将在此显示</div></div>';return}
+  list.innerHTML=records.map(function(r){var si=getStatusInfo(r.status);return '<div class="record" onclick="showDetail('+r.id+')"><div class="record-head"><span class="record-name">'+r.materialName+'</span><span class="status '+si.cls+'">'+si.label+'</span></div><div class="record-info"><span>📦 '+r.materialCode+'</span><span>🏭 '+(r.deptDisplay||r.dept)+'</span><span>🕐 '+fmtD(r.createdAt)+'</span></div></div>'}).join('');
+}
+function filterHistory(){renderHistory()}
+
+function renderDetail(record){
+  var si=getStatusInfo(record.status);
+  var steps=[{key:'submitted',label:'提交反馈'},{key:'zy_review',label:'张月审批'},{key:'cz_review',label:'陈湛审批'},{key:'completed',label:'处理完成'}];
+  var fi=steps.findIndex(function(s){return s.key===record.status}),rej=record.status==='rejected';
+  var tl=steps.map(function(st,i){var fe=record.flow.find(function(f){return f.step===st.key});var dc='waiting';if(fe)dc='done';else if(i===fi&&!rej)dc='active';var h='';if(fe)h='<div class="timeline-meta">'+fe.handler+' · '+fmtDF(fe.time)+'</div>'+(fe.comment?'<div class="timeline-content">'+fe.comment+'</div>':'');else if(i===fi&&!rej)h='<div class="timeline-meta" style="color:var(--primary)">等待处理中...</div>';return '<div class="timeline-item"><div class="timeline-dot '+dc+'"></div><div class="timeline-title">'+st.label+'</div>'+h+'</div>'}).join('');
+  if(rej){var re=record.flow.find(function(f){return f.step==='rejected'});tl+='<div class="timeline-item"><div class="timeline-dot rejected"></div><div class="timeline-title" style="color:var(--danger)">已退回</div>'+(re?'<div class="timeline-meta">'+re.handler+' · '+fmtDF(re.time)+'</div>'+(re.comment?'<div class="timeline-content">'+re.comment+'</div>':''):'')+'</div>'}
+  var ah='';if(record.altMaterials&&record.altMaterials.length>0){ah='<div class="divider"></div><div class="detail-section"><div class="detail-section-title">替代物料</div>'+record.altMaterials.map(function(a,i){return '<div class="detail-row"><div class="detail-label">替代 '+(i+1)+'</div><div class="detail-value">'+(a.code||'-')+' / '+(a.name||'-')+'</div></div>'}).join('')+'</div>'}
+  document.getElementById('detailContent').innerHTML='<div class="detail-header"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:18px;font-weight:700">'+record.materialName+'</span><span class="status '+si.cls+'">'+si.label+'</span></div><div style="font-size:13px;color:var(--gray-3)">编号 '+record.code+' · 提报于 '+fmtDF(record.createdAt)+'</div></div><div class="card"><div class="detail-section"><div class="detail-section-title">基本信息</div><div class="detail-row"><div class="detail-label">物料编码</div><div class="detail-value">'+record.materialCode+'</div></div><div class="detail-row"><div class="detail-label">物料描述</div><div class="detail-value">'+record.materialName+'</div></div><div class="detail-row"><div class="detail-label">工厂全称</div><div class="detail-value">'+(record.factory||'-')+'</div></div><div class="detail-row"><div class="detail-label">所属部门</div><div class="detail-value">'+(record.deptDisplay||record.dept)+'</div></div><div class="detail-row"><div class="detail-label">提报人</div><div class="detail-value">'+record.submitter+'</div></div></div><div class="divider"></div><div class="detail-section"><div class="detail-section-title">不适用原因</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">'+record.reasons.map(function(r){return '<span class="tag" style="background:var(--danger-bg);color:var(--danger)">'+r+'</span>'}).join('')+'</div><div style="font-size:14px;color:var(--gray-2);line-height:1.7">'+record.detail+'</div></div>'+ah+(record.attachments&&record.attachments.length>0?'<div class="divider"></div><div class="detail-section"><div class="detail-section-title">附件</div><div class="attachment-list">'+record.attachments.map(function(a){return '<div class="attachment-item">📎 '+a+'</div>'}).join('')+'</div></div>':'')+(record.remark?'<div class="divider"></div><div class="detail-section"><div class="detail-section-title">备注</div><div style="font-size:14px;color:var(--gray-2)">'+record.remark+'</div></div>':'')+'</div><div class="card"><div class="card-title">审批进度</div><div class="timeline">'+tl+'</div></div><div style="height:16px"></div>';
+}
+
+function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2000)}
+function updateBadge(){var c=state.records.length,b=document.getElementById('countBadge');if(c>0){b.textContent=c;b.style.display='inline-block'}else{b.style.display='none'}}
+
+document.getElementById('f_submitter').value=CONFIG.currentUser;
+updateBadge();
+</script>
+</body>
+</html>
