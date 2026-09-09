@@ -124,6 +124,32 @@ body{display:flex;flex-direction:column;max-width:500px;margin:0 auto}
 .success-check svg{width:32px;height:32px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .success-title{font-size:20px;font-weight:600;margin-bottom:8px}
 .success-desc{font-size:14px;color:var(--gray-3);margin-bottom:24px;line-height:1.6}
+
+.approval-actions{display:flex;gap:12px;margin-top:16px}
+.approval-actions .btn{flex:1}
+.btn-approve{background:var(--success);color:#fff;border:none}
+.btn-approve:active{background:#069a5e}
+.btn-reject{background:#fff;color:var(--danger);border:1px solid var(--danger)}
+.btn-reject:active{background:var(--danger-bg)}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:250;display:none;align-items:center;justify-content:center;padding:24px}
+.modal-overlay.show{display:flex}
+.modal-box{background:#fff;border-radius:var(--radius);padding:20px;width:100%;max-width:360px}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:12px}
+.modal-textarea{width:100%;min-height:80px;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-family:var(--font);resize:vertical;margin-bottom:16px}
+.modal-textarea:focus{outline:none;border-color:var(--primary)}
+.modal-btns{display:flex;gap:10px;justify-content:flex-end}
+.modal-btns .btn{width:auto;padding:8px 20px;font-size:14px}
+
+.approval-record{padding:14px 16px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background .15s}
+.approval-record:last-child{border-bottom:none}
+.approval-record:active{background:var(--gray-5)}
+.approval-record .ar-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.approval-record .ar-name{font-size:15px;font-weight:600}
+.approval-record .ar-info{display:flex;gap:10px;font-size:13px;color:var(--gray-2);flex-wrap:wrap}
+.approval-record .ar-info span{display:flex;align-items:center;gap:3px}
+.approval-record .ar-reasons{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.approval-record .ar-reasons .tag{font-size:11px;padding:1px 6px}
 </style>
 </head>
 <body>
@@ -141,6 +167,7 @@ body{display:flex;flex-direction:column;max-width:500px;margin:0 auto}
 <div class="tabs">
   <div class="tab active" data-tab="submit" onclick="switchTab('submit')">提交申请</div>
   <div class="tab" data-tab="history" onclick="switchTab('history')">我的记录<span class="badge" id="countBadge" style="display:none">0</span></div>
+  <div class="tab" data-tab="approval" onclick="switchTab('approval')" id="approvalTab" style="display:none">待我审批<span class="badge" id="approvalBadge" style="display:none;background:var(--danger)">0</span></div>
 </div>
 
 <div class="content">
@@ -269,6 +296,24 @@ body{display:flex;flex-direction:column;max-width:500px;margin:0 auto}
     </div>
     <div id="detailContent"></div>
   </div>
+
+  <div class="page" id="page-approval">
+    <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:15px;font-weight:600;color:var(--gray-1)">待审批记录</div>
+      <button class="btn btn-sm btn-outline" onclick="loadApprovalData()" style="border:1px solid var(--primary);padding:5px 12px;font-size:12px">刷新</button>
+    </div>
+    <div id="approvalLoading" style="text-align:center;padding:32px;color:var(--gray-3)">
+      <div style="font-size:14px">加载中...</div>
+    </div>
+    <div id="approvalList"></div>
+  </div>
+
+  <div class="page" id="page-approval-detail">
+    <div style="margin-bottom:12px">
+      <button class="btn btn-sm btn-outline" onclick="switchTab('approval')" style="border:none;padding:6px 12px;font-size:13px">← 返回列表</button>
+    </div>
+    <div id="approvalDetailContent"></div>
+  </div>
 </div>
 
 <div class="success-overlay" id="successOverlay">
@@ -281,8 +326,19 @@ body{display:flex;flex-direction:column;max-width:500px;margin:0 auto}
 
 <div class="toast" id="toast"></div>
 
+<div class="modal-overlay" id="approvalModal">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle">审批意见</div>
+    <textarea class="modal-textarea" id="approvalComment" placeholder="请输入审批意见（选填）"></textarea>
+    <div class="modal-btns">
+      <button class="btn btn-outline" style="border:1px solid #ddd;color:var(--gray-2)" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" id="modalConfirmBtn" onclick="confirmApproval()">确认</button>
+    </div>
+  </div>
+</div>
+
 <script>
-const CONFIG={API_BASE:'',currentUser:'张月',currentUserId:'zhangyue9',WEBHOOK_URL:'https://eo2w5m4lxpylyxf.m.pipedream.net'};
+const CONFIG={API_BASE:'',currentUser:'张月',currentUserId:'zhangyue9',WEBHOOK_URL:'https://eo2w5m4lxpylyxf.m.pipedream.net',DATA_URL:'https://raw.githubusercontent.com/Wilmarnontrade12/caigou-app/main/data/pending.json',APPROVERS:['zhangyue9','chenzhan']};
 
 (function autoDetectUser(){try{if(window.wx&&wx.invoke){wx.invoke('getContext',{},function(res){if(res.err_msg==='getContext:ok'){var ctx=JSON.parse(res.data);CONFIG.currentUserId=ctx.userid||CONFIG.currentUserId;if(CONFIG.API_BASE){fetch(CONFIG.API_BASE+'/api/userinfo?userid='+CONFIG.currentUserId).then(function(r){return r.json()}).then(function(d){if(d.name){CONFIG.currentUser=d.name;document.getElementById('f_submitter').value=d.name}})}}})}}catch(e){}})();
 
@@ -385,6 +441,164 @@ function updateBadge(){var c=state.records.length,b=document.getElementById('cou
 
 document.getElementById('f_submitter').value=CONFIG.currentUser;
 updateBadge();
+
+// ===== 审批功能 =====
+var approvalData=[];
+var pendingAction=null;
+
+function initApprovalAccess(){
+  if(CONFIG.APPROVERS.indexOf(CONFIG.currentUserId)>=0){
+    document.getElementById('approvalTab').style.display='';
+    loadApprovalData();
+  }
+}
+
+function loadApprovalData(){
+  var loading=document.getElementById('approvalLoading');
+  var list=document.getElementById('approvalList');
+  loading.style.display='block';
+  list.innerHTML='';
+
+  fetch(CONFIG.DATA_URL+'?t='+Date.now()).then(function(r){return r.json()}).then(function(data){
+    loading.style.display='none';
+    approvalData=data.records||[];
+    renderApprovalList();
+  }).catch(function(e){
+    loading.style.display='none';
+    list.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">加载失败</div><div class="empty-sub">请检查网络后重试</div></div>';
+  });
+}
+
+function renderApprovalList(){
+  var list=document.getElementById('approvalList');
+  var records=approvalData;
+  var badge=document.getElementById('approvalBadge');
+
+  if(records.length===0){
+    list.innerHTML='<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">暂无待审批记录</div><div class="empty-sub">新提交将自动同步至此</div></div>';
+    badge.style.display='none';
+    return;
+  }
+
+  badge.textContent=records.length;
+  badge.style.display='inline-block';
+
+  list.innerHTML='<div class="card" style="padding:0;overflow:hidden">'+records.map(function(r,i){
+    var reasons=(r.reasons||'').split(/[,，、]/);
+    var reasonTags=reasons.map(function(rs){return '<span class="tag" style="background:var(--danger-bg);color:var(--danger)">'+rs.trim()+'</span>'}).join('');
+    return '<div class="approval-record" onclick="showApprovalDetail('+i+')"><div class="ar-head"><span class="ar-name">'+r.materialName+'</span><span class="status status-pending">'+r.status+'</span></div><div class="ar-info"><span>📦 '+r.materialCode+'</span><span>🏭 '+(r.deptDisplay||'')+'</span><span>🕐 '+r.createdAt+'</span></div><div class="ar-reasons">'+reasonTags+'</div></div>';
+  }).join('')+'</div>';
+}
+
+function showApprovalDetail(idx){
+  var r=approvalData[idx];
+  if(!r)return;
+  pendingAction={index:idx,record:r};
+
+  var altHtml='';
+  if(r.altMaterials){
+    altHtml='<div class="divider"></div><div class="detail-section"><div class="detail-section-title">替代物料</div><div style="font-size:14px;color:var(--gray-2)">'+r.altMaterials+'</div></div>';
+  }
+
+  document.getElementById('approvalDetailContent').innerHTML=
+    '<div class="detail-header"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:18px;font-weight:700">'+r.materialName+'</span><span class="status status-pending">'+r.status+'</span></div><div style="font-size:13px;color:var(--gray-3)">编号 '+r.code+' · 提报于 '+r.createdAt+'</div></div>'+
+    '<div class="card"><div class="detail-section"><div class="detail-section-title">基本信息</div>'+
+    '<div class="detail-row"><div class="detail-label">物料编码</div><div class="detail-value">'+r.materialCode+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">工厂全称</div><div class="detail-value">'+(r.factory||'-')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">所属部门</div><div class="detail-value">'+(r.deptDisplay||'-')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">提报人</div><div class="detail-value">'+r.submitter+'</div></div>'+
+    '</div><div class="divider"></div>'+
+    '<div class="detail-section"><div class="detail-section-title">不适用原因</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">'+(r.reasons||'').split(/[,，、]/).map(function(rs){return '<span class="tag" style="background:var(--danger-bg);color:var(--danger)">'+rs.trim()+'</span>'}).join('')+'</div>'+
+    '<div style="font-size:14px;color:var(--gray-2);line-height:1.7">'+r.detail+'</div></div>'+
+    altHtml+
+    (r.remark?'<div class="divider"></div><div class="detail-section"><div class="detail-section-title">备注</div><div style="font-size:14px;color:var(--gray-2)">'+r.remark+'</div></div>':'')+
+    (r.approvalRecord?'<div class="divider"></div><div class="detail-section"><div class="detail-section-title">审批记录</div><div style="font-size:13px;color:var(--gray-2);line-height:1.8;white-space:pre-line">'+r.approvalRecord+'</div></div>':'')+
+    '</div>'+
+    '<div class="card"><div class="card-title">审批操作</div>'+
+    '<div class="approval-actions">'+
+    '<button class="btn btn-reject" onclick="openApprovalModal(\'reject\')">退回</button>'+
+    '<button class="btn btn-approve" onclick="openApprovalModal(\'approve\')">通过</button>'+
+    '</div></div>'+
+    '<div style="height:16px"></div>';
+
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  document.getElementById('page-approval-detail').classList.add('active');
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
+}
+
+function openApprovalModal(action){
+  if(!pendingAction)return;
+  var modal=document.getElementById('approvalModal');
+  var title=document.getElementById('modalTitle');
+  var btn=document.getElementById('modalConfirmBtn');
+  var comment=document.getElementById('approvalComment');
+
+  pendingAction.action=action;
+  comment.value='';
+
+  if(action==='approve'){
+    title.textContent='确认通过';
+    btn.style.background='var(--success)';
+    btn.textContent='确认通过';
+  }else{
+    title.textContent='退回申请';
+    btn.style.background='var(--danger)';
+    btn.textContent='确认退回';
+  }
+  modal.classList.add('show');
+}
+
+function closeModal(){
+  document.getElementById('approvalModal').classList.remove('show');
+}
+
+function confirmApproval(){
+  if(!pendingAction)return;
+  var action=pendingAction.action;
+  var comment=document.getElementById('approvalComment').value.trim();
+
+  if(action==='reject'&&!comment){
+    showToast('退回时请填写审批意见');
+    return;
+  }
+
+  var r=pendingAction.record;
+  var newStatus=action==='approve'?'completed':'rejected';
+  var newStatusLabel=action==='approve'?'已完成':'已退回';
+  var now=new Date().toISOString();
+  var approvalLine=fmtDF(now)+' '+CONFIG.currentUser+' '+(action==='approve'?'审批通过':'退回')+(comment?'：'+comment:'');
+
+  var payload={
+    actionType:'approval',
+    record_id:r.record_id,
+    code:r.code,
+    originalStatus:r.status,
+    newStatus:newStatus,
+    approver:CONFIG.currentUser,
+    approverId:CONFIG.currentUserId,
+    comment:comment,
+    approvalLine:approvalLine,
+    timestamp:now
+  };
+
+  fetch(CONFIG.WEBHOOK_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  }).then(function(resp){
+    closeModal();
+    showToast(action==='approve'?'已通过':'已退回');
+    setTimeout(function(){
+      switchTab('approval');
+    },1200);
+  }).catch(function(e){
+    closeModal();
+    showToast('网络异常，请重试');
+  });
+}
+
+initApprovalAccess();
 </script>
 </body>
 </html>
