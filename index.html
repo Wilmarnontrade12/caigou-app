@@ -282,7 +282,7 @@ body{display:flex;flex-direction:column;max-width:500px;margin:0 auto}
 <div class="toast" id="toast"></div>
 
 <script>
-const CONFIG={API_BASE:'',currentUser:'张月',currentUserId:'zhangyue9'};
+const CONFIG={API_BASE:'',currentUser:'张月',currentUserId:'zhangyue9',WEBHOOK_URL:'https://eo2w5m4lxpylyxf.m.pipedream.net'};
 
 (function autoDetectUser(){try{if(window.wx&&wx.invoke){wx.invoke('getContext',{},function(res){if(res.err_msg==='getContext:ok'){var ctx=JSON.parse(res.data);CONFIG.currentUserId=ctx.userid||CONFIG.currentUserId;if(CONFIG.API_BASE){fetch(CONFIG.API_BASE+'/api/userinfo?userid='+CONFIG.currentUserId).then(function(r){return r.json()}).then(function(d){if(d.name){CONFIG.currentUser=d.name;document.getElementById('f_submitter').value=d.name}})}}})}}catch(e){}})();
 
@@ -331,6 +331,13 @@ function submitForm(){
 
   var record={id:state.nextId++,code:'NAC-2026-'+String(state.nextId-1).padStart(4,'0'),submitter:CONFIG.currentUser,submitterId:CONFIG.currentUserId,factory:factory,dept:dept,deptDisplay:dd,workshop:workshop,materialCode:code,materialName:name,reasons:reasons,detail:detail,altMaterials:altM,remark:document.getElementById('f_remark').value.trim(),attachments:state.attachments.map(function(a){return a.name}),status:'submitted',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),flow:[{step:'submitted',label:'已提交',handler:CONFIG.currentUser,time:new Date().toISOString(),comment:''}]};
   state.records.unshift(record);saveState();
+
+  // 同步到 Pipedream（供定时任务读取写入智能表格）
+  fetch(CONFIG.WEBHOOK_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(record)
+  }).catch(function(e){console.warn('Webhook 发送失败:',e)});
 
   document.getElementById('feedbackForm').reset();
   document.getElementById('f_submitter').value=CONFIG.currentUser;
