@@ -1,0 +1,73 @@
+name: Form to SmartSheet
+
+on:
+  repository_dispatch:
+    types: [form_submit]
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write to WeChat SmartSheet
+        env:
+          CORPID: ${{ secrets.WECOM_CORPID }}
+          SECRET: ${{ secrets.WECOM_SECRET }}
+          DOCID: dcz_eq_gCxoSidbIPv3Tj6Q3LvkqAUxSGZRy5zfHefww580Ei1vsngA4Sg1yCBxOkBLrykNqk1mos_QFhIZPoK_w
+          SHEET_ID: q979lj
+          PAYLOAD: ${{ toJson(github.event.client_payload) }}
+        run: |
+          # Get access token
+          TOKEN_RESP=$(curl -s "https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=${CORPID}&corpsecret=${SECRET}")
+          ACCESS_TOKEN=$(echo "$TOKEN_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
+
+          if [ -z "$ACCESS_TOKEN" ]; then
+            echo "Failed to get access token: $TOKEN_RESP"
+            exit 1
+          fi
+
+          # Parse payload and build values
+          VALUES=$(echo "$PAYLOAD" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          now = d.get('createdAt','')
+          code = d.get('code','')
+          reasons = ','.join(d.get('reasons',[]))
+          alt_materials = ''
+          for a in d.get('altMaterials',[]):
+              if a.get('code') or a.get('name'):
+                  alt_materials += f\"{a.get('code','')}/{a.get('name','')}  \"
+          values = {
+              '\u7f16\u53f7': [{'type':'text','text': code}],
+              '\u63d0\u62a5\u4eba': [{'type':'text','text': d.get('submitter','')}],
+              '\u5de5\u5382\u5168\u79f0': [{'type':'text','text': d.get('factory','')}],
+              '\u6240\u5c5e\u90e8\u95e8': [{'type':'text','text': d.get('deptDisplay', d.get('dept',''))}],
+              '\u7269\u6599\u7f16\u7801': [{'type':'text','text': d.get('materialCode','')}],
+              '\u7269\u6599\u63cf\u8ff0': [{'type':'text','text': d.get('materialName','')}],
+              '\u4e0d\u9002\u7528\u539f\u56e0': [{'type':'text','text': reasons}],
+              '\u8be6\u7ec6\u8bf4\u660e': [{'type':'text','text': d.get('detail','')}],
+              '\u66ff\u4ee3\u7269\u6599': [{'type':'text','text': alt_materials.strip()}],
+              '\u5907\u6ce8': [{'type':'text','text': d.get('remark','')}],
+              '\u5f53\u524d\u72b6\u6001': [{'type':'text','text': '\u5df2\u63d0\u4ea4'}],
+              '\u63d0\u62a5\u65f6\u95f4': [{'type':'text','text': now}],
+              '\u66f4\u65b0\u65f6\u95f4': [{'type':'text','text': now}],
+              '\u5ba1\u6279\u8bb0\u5f55': [{'type':'text','text': json.dumps([{'step':'submitted','label':'\u5df2\u63d0\u4ea4','handler':d.get('submitter',''),'time':now,'comment':''}], ensure_ascii=False)}]
+          }
+          print(json.dumps(values, ensure_ascii=False))
+          ")
+
+          # Write to smart sheet
+          RESULT=$(curl -s -X POST "https://qyapi.weixin.qq.com/cgi-bin/wedoc/smartsheet/add_records?access_token=${ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"docid\": \"${DOCID}\",
+              \"sheet_id\": \"${SHEET_ID}\",
+              \"records\": [{\"values\": ${VALUES}}]
+            }")
+
+          echo "Result: $RESULT"
+          ERRCODE=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('errcode',-1))")
+          if [ "$ERRCODE" != "0" ]; then
+            echo "Failed to write to smart sheet"
+            exit 1
+          fi
+          echo "Successfully wrote to smart sheet!"
