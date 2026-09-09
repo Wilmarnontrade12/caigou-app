@@ -338,7 +338,7 @@ body{display:flex;flex-direction:column;max-width:500px;margin:0 auto}
 </div>
 
 <script>
-const CONFIG={API_BASE:'',currentUser:'张月',currentUserId:'zhangyue9',WEBHOOK_URL:'https://eo2w5m4lxpylyxf.m.pipedream.net',DATA_URL:'https://raw.githubusercontent.com/Wilmarnontrade12/caigou-app/main/data/pending.json',APPROVERS:['zhangyue9','chenzhan']};
+const CONFIG={API_BASE:'',currentUser:'张月',currentUserId:'zhangyue9',WEBHOOK_URL:'https://eo2w5m4lxpylyxf.m.pipedream.net',DATA_URL:'https://raw.githubusercontent.com/Wilmarnontrade12/caigou-app/main/data/pending.json',APPROVERS:{'zhangyue9':{name:'张月',node:1,nextStatus:'张月已审批',nextLabel:'张月审批中'},'chenzhan':{name:'陈湛',node:2,nextStatus:'completed',nextLabel:'已完成'}}};
 
 (function autoDetectUser(){try{if(window.wx&&wx.invoke){wx.invoke('getContext',{},function(res){if(res.err_msg==='getContext:ok'){var ctx=JSON.parse(res.data);CONFIG.currentUserId=ctx.userid||CONFIG.currentUserId;if(CONFIG.API_BASE){fetch(CONFIG.API_BASE+'/api/userinfo?userid='+CONFIG.currentUserId).then(function(r){return r.json()}).then(function(d){if(d.name){CONFIG.currentUser=d.name;document.getElementById('f_submitter').value=d.name}})}}})}}catch(e){}})();
 
@@ -412,7 +412,7 @@ function submitForm(){
 }
 function closeSuccess(goH){document.getElementById('successOverlay').classList.remove('show');if(goH)switchTab('history')}
 
-function getStatusInfo(s){var m={submitted:{label:'已提交',cls:'status-pending'},zy_review:{label:'张月审批中',cls:'status-zy'},cz_review:{label:'陈湛审批中',cls:'status-cz'},completed:{label:'已完成',cls:'status-done'},rejected:{label:'已退回',cls:'status-rejected'}};return m[s]||{label:s,cls:''}}
+function getStatusInfo(s){var m={submitted:{label:'已提交',cls:'status-pending'},zy_review:{label:'张月审批中',cls:'status-zy'},zy_approved:{label:'张月已审批',cls:'status-cz'},cz_review:{label:'陈湛审批中',cls:'status-cz'},completed:{label:'已完成',cls:'status-done'},rejected:{label:'已退回',cls:'status-rejected'}};return m[s]||{label:s,cls:''}}
 function fmtD(iso){if(!iso)return'-';var d=new Date(iso);return(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
 function fmtDF(iso){if(!iso)return'-';var d=new Date(iso);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
 
@@ -428,8 +428,10 @@ function filterHistory(){renderHistory()}
 
 function renderDetail(record){
   var si=getStatusInfo(record.status);
-  var steps=[{key:'submitted',label:'提交反馈'},{key:'zy_review',label:'张月审批'},{key:'cz_review',label:'陈湛审批'},{key:'completed',label:'处理完成'}];
-  var fi=steps.findIndex(function(s){return s.key===record.status}),rej=record.status==='rejected';
+  var steps=[{key:'submitted',label:'提交反馈'},{key:'zy_approved',label:'张月审批'},{key:'completed',label:'陈湛审批'},{key:'done',label:'处理完成'}];
+  var statusMap={'submitted':'submitted','zy_review':'zy_approved','zy_approved':'zy_approved','cz_review':'completed','completed':'done'};
+  var mappedStatus=statusMap[record.status]||record.status;
+  var fi=steps.findIndex(function(s){return s.key===mappedStatus}),rej=record.status==='rejected';
   var tl=steps.map(function(st,i){var fe=record.flow.find(function(f){return f.step===st.key});var dc='waiting';if(fe)dc='done';else if(i===fi&&!rej)dc='active';var h='';if(fe)h='<div class="timeline-meta">'+fe.handler+' · '+fmtDF(fe.time)+'</div>'+(fe.comment?'<div class="timeline-content">'+fe.comment+'</div>':'');else if(i===fi&&!rej)h='<div class="timeline-meta" style="color:var(--primary)">等待处理中...</div>';return '<div class="timeline-item"><div class="timeline-dot '+dc+'"></div><div class="timeline-title">'+st.label+'</div>'+h+'</div>'}).join('');
   if(rej){var re=record.flow.find(function(f){return f.step==='rejected'});tl+='<div class="timeline-item"><div class="timeline-dot rejected"></div><div class="timeline-title" style="color:var(--danger)">已退回</div>'+(re?'<div class="timeline-meta">'+re.handler+' · '+fmtDF(re.time)+'</div>'+(re.comment?'<div class="timeline-content">'+re.comment+'</div>':''):'')+'</div>'}
   var ah='';if(record.altMaterials&&record.altMaterials.length>0){ah='<div class="divider"></div><div class="detail-section"><div class="detail-section-title">替代物料</div>'+record.altMaterials.map(function(a,i){return '<div class="detail-row"><div class="detail-label">替代 '+(i+1)+'</div><div class="detail-value">'+(a.code||'-')+' / '+(a.name||'-')+'</div></div>'}).join('')+'</div>'}
@@ -447,7 +449,8 @@ var approvalData=[];
 var pendingAction=null;
 
 function initApprovalAccess(){
-  if(CONFIG.APPROVERS.indexOf(CONFIG.currentUserId)>=0){
+  if(CONFIG.APPROVERS[CONFIG.currentUserId]){
+    CONFIG.currentUserRole=CONFIG.APPROVERS[CONFIG.currentUserId];
     document.getElementById('approvalTab').style.display='';
     loadApprovalData();
   }
@@ -461,7 +464,10 @@ function loadApprovalData(){
 
   fetch(CONFIG.DATA_URL+'?t='+Date.now()).then(function(r){return r.json()}).then(function(data){
     loading.style.display='none';
-    approvalData=data.records||[];
+    var allRecords=data.records||[];
+    // 按当前审批人过滤：张月只看"已提交"，陈湛只看"张月已审批"
+    var myStatus=CONFIG.currentUserRole.node===1?'已提交':'张月已审批';
+    approvalData=allRecords.filter(function(r){return r.status===myStatus});
     renderApprovalList();
   }).catch(function(e){
     loading.style.display='none';
@@ -564,10 +570,11 @@ function confirmApproval(){
   }
 
   var r=pendingAction.record;
-  var newStatus=action==='approve'?'completed':'rejected';
-  var newStatusLabel=action==='approve'?'已完成':'已退回';
+  var role=CONFIG.currentUserRole;
+  var newStatus=action==='approve'?role.nextStatus:'rejected';
   var now=new Date().toISOString();
-  var approvalLine=fmtDF(now)+' '+CONFIG.currentUser+' '+(action==='approve'?'审批通过':'退回')+(comment?'：'+comment:'');
+  var actionLabel=action==='approve'?(role.node===1?'张月审批通过':'陈湛审批通过'):(role.name+'退回');
+  var approvalLine=fmtDF(now)+' '+role.name+' '+(action==='approve'?'审批通过':'退回')+(comment?'：'+comment:'');
 
   var payload={
     actionType:'approval',
@@ -575,8 +582,9 @@ function confirmApproval(){
     code:r.code,
     originalStatus:r.status,
     newStatus:newStatus,
-    approver:CONFIG.currentUser,
+    approver:role.name,
     approverId:CONFIG.currentUserId,
+    approverNode:role.node,
     comment:comment,
     approvalLine:approvalLine,
     submitterEmail:r.submitterEmail||'',
@@ -593,6 +601,7 @@ function confirmApproval(){
     closeModal();
     showToast(action==='approve'?'已通过':'已退回');
     setTimeout(function(){
+      loadApprovalData();
       switchTab('approval');
     },1200);
   }).catch(function(e){
