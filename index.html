@@ -385,7 +385,7 @@ function submitForm(){
 
   var dd=dept;if(dept==='生产'&&workshop)dd=dept+'（'+workshop+'）';else if(dept==='其他'&&deptOther)dd=deptOther;
 
-  var record={id:state.nextId++,code:'NAC-2026-'+String(state.nextId-1).padStart(4,'0'),submitter:CONFIG.currentUser,submitterId:CONFIG.currentUserId,factory:factory,dept:dept,deptDisplay:dd,workshop:workshop,materialCode:code,materialName:name,reasons:reasons,detail:detail,altMaterials:altM,remark:document.getElementById('f_remark').value.trim(),attachments:state.attachments.map(function(a){return a.name}),status:'submitted',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),flow:[{step:'submitted',label:'已提交',handler:CONFIG.currentUser,time:new Date().toISOString(),comment:''}]};
+  var record={id:state.nextId++,code:'NAC-2026-'+String(state.nextId-1).padStart(4,'0'),submitter:CONFIG.currentUser,submitterId:CONFIG.currentUserId,submitterEmail:CONFIG.currentUserId+'@cn.wilmar-intl.com',factory:factory,dept:dept,deptDisplay:dd,workshop:workshop,materialCode:code,materialName:name,reasons:reasons,detail:detail,altMaterials:altM,remark:document.getElementById('f_remark').value.trim(),attachments:state.attachments.map(function(a){return a.name}),status:'submitted',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),flow:[{step:'submitted',label:'已提交',handler:CONFIG.currentUser,time:new Date().toISOString(),comment:''}]};
   state.records.unshift(record);saveState();
 
   // 同步到 Pipedream（供定时任务读取写入智能表格）
@@ -579,6 +579,9 @@ function confirmApproval(){
     approverId:CONFIG.currentUserId,
     comment:comment,
     approvalLine:approvalLine,
+    submitterEmail:r.submitterEmail||'',
+    submitterName:r.submitter||'',
+    materialName:r.materialName||'',
     timestamp:now
   };
 
