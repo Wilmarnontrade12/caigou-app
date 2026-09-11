@@ -1,38 +1,21 @@
 {
   "records": [
     {
-      "record_id": "OCAa0A",
-      "code": "NAC-2026-0099",
-      "submitter": "张月",
-      "submitterEmail": "zhangyue9@cn.wilmar-intl.com",
-      "factory": "益海嘉里（泰州）食品有限公司",
-      "deptDisplay": "生产（烘焙车间）",
-      "materialCode": "0981234",
-      "materialName": "测试物料-耐高温输送带",
-      "reasons": "规格参数不符、停产",
-      "detail": "原集采物料型号已停产，替代型号规格不完全匹配",
-      "altMaterials": "0985678 耐高温输送带-改进型",
-      "remark": "测试数据，验证流程",
-      "status": "张月已审批",
-      "createdAt": "2026-09-09 10:00:00",
-      "approvalRecord": "2026-09-09 10:00 张月 已提交\n2026-09-09 18:00 张月 审批通过"
-    },
-    {
       "record_id": "github_NAC20260001",
       "code": "NAC-2026-0001",
       "submitter": "张月",
       "submitterEmail": "zhangyue9@cn.wilmar-intl.com",
-      "factory": "测试工厂",
-      "deptDisplay": "生产",
+      "factory": "金龙鱼",
+      "deptDisplay": "测试",
       "materialCode": "0202-1234567",
       "materialName": "测试物料",
       "reasons": "规格参数不符",
       "detail": "测试",
       "altMaterials": "",
       "remark": "",
-      "status": "张月已审批",
       "createdAt": "2026-09-10 11:23:46",
-      "approvalRecord": "2026-09-10 11:23 张月 已提交\n2026-09-10 12:41 张月 审批通过"
+      "status": "张月已审批",
+      "approvalRecord": "2026-09-10 11:23 张月 已提交\n2026-09-10 12:35 张月 审批通过\n2026-09-10 12:41 张月 审批通过"
     },
     {
       "record_id": "github_NAC20260002",
@@ -47,10 +30,27 @@
       "detail": "集采物料规格与现场设备不匹配，油缸内径偏大导致密封件无法安装",
       "altMaterials": "",
       "remark": "已与现场确认，需紧急采购",
-      "status": "已完成",
       "createdAt": "2026-09-10 12:50:24",
-      "approvalRecord": "2026-09-10 12:50:58 梁德涛 已提交\n2026-09-10 12:51:29 张月 审批通过\n2026-09-10 12:52:04 陈湛 审批通过"
+      "status": "已提交",
+      "approvalRecord": "2026-09-10 12:50:24 梁德涛 提交"
+    },
+    {
+      "record_id": "OCAa0A",
+      "code": "NAC-2026-0099",
+      "submitter": "张月",
+      "submitterEmail": "zhangyue9@cn.wilmar-intl.com",
+      "factory": "益海嘉里（泰州）食品有限公司",
+      "deptDisplay": "生产（烘焙车间）",
+      "materialCode": "0981234",
+      "materialName": "测试物料-耐高温输送带",
+      "reasons": "规格参数不符、停产",
+      "detail": "原集采物料型号已停产，替代型号规格不完全匹配",
+      "altMaterials": "0985678 耐高温输送带-改进型",
+      "remark": "测试数据，验证流程",
+      "createdAt": "2026-09-09 10:00:00",
+      "status": "已提交",
+      "approvalRecord": "2026-09-09 10:00 张月 已提交\n2026-09-09 18:00 张月 审批通过"
     }
   ],
-  "updatedAt": "2026-09-10T04:52:04Z"
+  "updatedAt": "2026-09-11T00:00:00Z"
 }
